@@ -26,13 +26,13 @@ def plot_images():
     plt.rcParams['ytick.minor.left'] = True
 
     plt.rcParams['font.family'] = 'Times'
-    plt.rcParams['font.size'] = 16
+    plt.rcParams['font.size'] = 12
 
     plt.rcParams['legend.frameon'] = True
     plt.rcParams['legend.framealpha'] = 0.8
     plt.rcParams['legend.loc'] = 'best'
     plt.rcParams['legend.fancybox'] = True
-    plt.rcParams['legend.fontsize'] = 16
+    plt.rcParams['legend.fontsize'] = 12
 
 
 def bin_time_flux_error(time, flux, error, bin_fact):
