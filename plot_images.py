@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import json
+from scipy.stats import median_abs_deviation
 
 
 def plot_images():
@@ -131,3 +132,59 @@ def bin_by_time_interval(time, flux, error, interval_minutes=5):
         start_idx = end_idx
 
     return np.array(binned_time), np.array(binned_flux), np.array(binned_error)
+
+
+def remove_outliers(time, flux, flux_err, air_mass=None, zero_point=None):
+    """
+    Remove massive outliers in 3 rounds of clipping.
+
+    Parameters
+    ----------
+    time : array
+        Time values.
+    flux : array
+        Flux values.
+    flux_err : array
+        Flux error values.
+    air_mass : array, optional
+        Air mass values. Default is None.
+    zero_point : array, optional
+        Zero point values. Default is None.
+
+    Returns
+    -------
+    n_time : array
+        Non-outlier time values.
+    n_flux : array
+        Non-outlier flux values.
+    n_flux_err : array
+        Non-outlier flux error values.
+    n_air_mass : array or None
+        Non-outlier air mass values, or None if air_mass was not provided.
+    n_zero_point : array or None
+        Non-outlier zero point values, or None if zero_point was not provided.
+    """
+    n_time = np.copy(time)
+    n_flux = np.copy(flux)
+    n_flux_err = np.copy(flux_err)
+    n_air_mass = np.copy(air_mass) if air_mass is not None else None
+    n_zero_point = np.copy(zero_point) if zero_point is not None else None
+
+    for _ in range(3):
+        mad = median_abs_deviation(n_flux)
+        loc = np.where((n_flux < np.median(n_flux) + 4 * mad) & (n_flux > np.median(n_flux) - 4 * mad))[0]
+
+        # Update time, flux, and flux_err with non-outlier values
+        n_time = n_time[loc]
+        n_flux = n_flux[loc]
+        n_flux_err = n_flux_err[loc]
+        if n_air_mass is not None:
+            n_air_mass = n_air_mass[loc]
+        if n_zero_point is not None:
+            n_zero_point = n_zero_point[loc]
+
+        # If no outliers were removed in this round, return the filtered arrays
+        if len(n_time) == len(time):
+            return n_time, n_flux, n_flux_err, n_air_mass, n_zero_point
+
+    return n_time, n_flux, n_flux_err, n_air_mass, n_zero_point
