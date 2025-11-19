@@ -46,7 +46,7 @@ ratio, ratio_err_low, ratio_err_high = propagate_ratio_error(
 )
 
 # Calculate cosine of the angle
-angle_in_degrees = 89.37
+angle_in_degrees = 89.69
 upper_error = 0.5
 lower_error = -1.07
 cosine_value = math.cos(math.radians(angle_in_degrees))
