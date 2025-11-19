@@ -1,6 +1,6 @@
 #making gitignore
-settings.csv
-params.csv
+data/settings.csv
+data/params.csv
 settings_max.csv
 params_max.csv
 data/
