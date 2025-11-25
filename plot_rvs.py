@@ -10,7 +10,7 @@ sns.set(context='paper', style='ticks', palette='deep', font='sans-serif', font_
 sns.set_style({"xtick.direction": "in", "ytick.direction": "in"})
 sns.set_context(rc={'lines.markeredgewidth': 1})
 plot_images()
-alles = allesfitter.allesclass('data/allesfit_TIC-453')
+alles = allesfitter.allesclass('data/allesfit_TIC-453_EXT_EXT')
 print(alles)
 
 for style in ['phase']:
@@ -26,12 +26,12 @@ for style in ['phase']:
     alles.plot('CORALIE_1', 'b', style + '_residuals', ax=axes[1], color='green')
     alles.plot('CORALIE_2', 'b', style + '_residuals', ax=axes[1], color='orange')
     axes[1].set_title('')
-    path = 'data/allesfit_TIC-453/'
+    path = 'data/allesfit_TIC-453_EXT_EXT/'
     # fig.savefig(path + 'TIC_RV.pdf', bbox_inches='tight')
 
 plt.show()
 
-for style in ['full_minus_offset']:
+for style in ['full']:
     fig, axes = plt.subplots(2, 1, figsize=(6, 6), gridspec_kw={'height_ratios': [3, 1]}, sharex=True)
     fig.subplots_adjust(hspace=0)
 
@@ -63,8 +63,6 @@ for style in ['full_minus_offset']:
         ax.set_xticklabels([f'{int(t - offset)}' for t in ticks])
         ax.xaxis.set_major_locator(MaxNLocator(nbins=7, integer=True))
     path = 'data/allesfit_TIC-453/'
-    fig.savefig(path + 'TIC_RV_TIME.pdf', bbox_inches='tight')
+    # fig.savefig(path + 'TIC_RV_TIME.pdf', bbox_inches='tight')
 
 plt.show()
-
-
