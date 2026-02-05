@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from astropy.io import fits
 import glob
-from plot_images import plot_images
+from plot_images import *
 
 plot_images()
 
@@ -87,7 +87,7 @@ for i in range(n_segments):
     f_seg = flux[start:end]
     e_seg = flux_err[start:end]
 
-    t_b, f_b, e_b = bin_segment(t_seg, f_seg, e_seg, bin_minutes=2)
+    t_b, f_b, e_b = bin_segment(t_seg, f_seg, e_seg, bin_minutes=5)
 
     binned_time_all.append(t_b)
     binned_flux_all.append(f_b)
@@ -110,7 +110,12 @@ n_after = int(np.ceil((t_max - t0) / period))
 transit_times = t0 + np.arange(n_before, n_after + 1) * period
 
 # --- Plot binned light curve with error bars ---
-# --- Plot binned light curve with error bars ---
+# --- Remove outliers from the binned light curve ---
+VALUE = 10  # threshold in MAD units, adjust if needed
+binned_time, binned_flux, binned_err, _, _ = remove_outliers(
+    binned_time, binned_flux, binned_err, VALUE
+)
+
 plt.figure(figsize=(12, 4))
 plt.errorbar(
     binned_time, binned_flux, yerr=binned_err,
@@ -122,12 +127,12 @@ for tt in transit_times:
     has_data = np.any(np.abs(binned_time - tt) < tolerance)
     color = 'red' if has_data else 'black'
     marker = 'v'
-    plt.plot(tt, 0.9805, marker=marker, color=color, markersize=8, alpha=0.8)
+    plt.plot(tt, 0.9825, marker=marker, color=color, markersize=8, alpha=0.8)
 
 
 plt.xlabel("Time (BJD - 2457000)")
 plt.ylabel("Relative Flux")
-plt.ylim(0.98, 1.02)
+plt.ylim(0.982, 1.019)
 plt.xlim(3190, 3350)
 plt.savefig(path + 'ngts_sectors.pdf', dpi=100, bbox_inches='tight')
 plt.show()
