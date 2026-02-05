@@ -138,3 +138,19 @@ plt.ylim(0.982, 1.019)
 plt.xlim(3190, 3350)
 plt.savefig(path + 'ngts_sectors.pdf', dpi=100, bbox_inches='tight')
 plt.show()
+
+
+t0 = 2460098.8315131348 - 2457000  # reference transit
+period = 58.204721                  # days
+# Find last observed time
+t_max = np.nanmax(time)  # assuming 'time' is your array of observations
+
+# Compute number of periods after t_max
+n_next = 10  # number of future transits to print
+n_start = int(np.ceil((t_max - t0) / period))  # first transit after last observation
+
+# Next 10 transits
+next_transits = t0 + (n_start + np.arange(n_next)) * period
+print("Next 10 transit times (BJD - 2457000):")
+for i, tt in enumerate(next_transits, 1):
+    print(f"{i}: {tt:.5f}")
