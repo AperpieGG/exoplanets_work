@@ -134,7 +134,7 @@ def bin_by_time_interval(time, flux, error, interval_minutes=5):
     return np.array(binned_time), np.array(binned_flux), np.array(binned_error)
 
 
-def remove_outliers(time, flux, flux_err, air_mass=None, zero_point=None):
+def remove_outliers(time, flux, flux_err, VALUE,  air_mass=None, zero_point=None):
     """
     Remove massive outliers in 3 rounds of clipping.
 
@@ -150,6 +150,8 @@ def remove_outliers(time, flux, flux_err, air_mass=None, zero_point=None):
         Air mass values. Default is None.
     zero_point : array, optional
         Zero point values. Default is None.
+    VALUE : float
+        Threshold multiplier for median absolute deviation.
 
     Returns
     -------
@@ -172,7 +174,7 @@ def remove_outliers(time, flux, flux_err, air_mass=None, zero_point=None):
 
     for _ in range(3):
         mad = median_abs_deviation(n_flux)
-        loc = np.where((n_flux < np.median(n_flux) + 4 * mad) & (n_flux > np.median(n_flux) - 4 * mad))[0]
+        loc = np.where((n_flux < np.median(n_flux) + VALUE * mad) & (n_flux > np.median(n_flux) - VALUE * mad))[0]
 
         # Update time, flux, and flux_err with non-outlier values
         n_time = n_time[loc]
