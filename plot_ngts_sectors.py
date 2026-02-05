@@ -18,7 +18,9 @@ all_err = []
 # --- Load all FITS files ---
 for fname in filenames:
     hdul = fits.open(fname)
-    data = hdul[3].data
+    data = hdul[4].data
+    # print the avaliable columns
+    print(f"Columns in {fname}: {data.columns.names}")
     t = data['BJD'] - 2457000
     f = data['FLUX_BSPROC']
     e = data['FLUX_BSPROC_ERR']
