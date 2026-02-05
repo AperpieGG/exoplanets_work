@@ -88,8 +88,8 @@ def plot_tess(time, y, yerr=None, sharey=False, **kwargs):
     time_shifted = time - 2457000
 
     # --- Transit information ---
-    t0 = 2460680.87881  # first observed transit (BJD)
-    period = 58.20462  # days
+    t0 = 2460098.8315131348  # first observed transit (BJD)
+    period = 58.204721  # days
 
     # Generate all expected transit times within observed time range
     t_min, t_max = np.nanmin(time), np.nanmax(time)
