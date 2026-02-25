@@ -4,40 +4,25 @@ from astropy.io import fits
 import glob
 from plot_images import *
 import batman
+import matplotlib.gridspec as gridspec
+
 
 plot_images()
 
+# --- Define transit parameters ---
 params = batman.TransitParams()
-params.t0 = 2460098.8315131348 - 2457000   # mid-transit time (same system as your data)
-params.per = 58.204721                    # orbital period (days)
+params.t0 = 2460098.8315131348 - 2457000   # reference mid-transit
+params.per = 58.204721                      # orbital period (days)
 params.rp = 0.09675                          # Rp/Rs
-params.a = 57.26                            # a/Rs
-params.inc = 88.968                         # inclination (deg)
-params.ecc = 0.370                          # eccentricity
-params.w = 97.5                           # longitude of periastron (deg)
+params.a = 57.26                             # a/Rs
+params.inc = 88.968                          # inclination (deg)
+params.ecc = 0.370                           # eccentricity
+params.w = 97.5                              # longitude of periastron (deg)
 params.limb_dark = "quadratic"
 params.u = [0.336, 0.246]
 
-
-# def generate_light_curve_ccd(time):
-#     params = TransitParams()
-#     params.rp = 0.10128671755330082
-#     params.inc = 83.47865783349353
-#     params.t0 = 2460569.6958506717
-#     params.per = 0.941452219114947
-#     params.a = 3.450146854608195
-#     params.ecc = 0.0
-#     params.w = 0.0
-#     params.u = [0.342216219135499, 0.3180565383230445]
-#     params.limb_dark = 'quadratic'
-#     model = TransitModel(params, time)
-#     return model.light_curve(params)
-
-
-# limb darkening coefficients
-
 # --- Settings ---
-path = '/Users/u5500483/Downloads/TIC-453147896_NGTS/'
+path = '/Users/u5500483/Downloads/TIC-453147896_NGTS/old_detrending/'
 filenames = glob.glob(path + '*.fits')
 print(filenames)
 
@@ -134,8 +119,6 @@ binned_err = np.concatenate(binned_err_all)
 # Transit ephemeris
 # -------------------------------------------------
 t0 = 2460098.8315131348 - 2457000
-period = 58.204721
-
 t_min, t_max = np.nanmin(time), np.nanmax(time)
 n_before = int(np.floor((t_min - t0) / period))
 n_after = int(np.ceil((t_max - t0) / period))
@@ -147,28 +130,6 @@ VALUE = 10  # threshold in MAD units, adjust if needed
 binned_time, binned_flux, binned_err, _, _ = remove_outliers(
     binned_time, binned_flux, binned_err, VALUE
 )
-
-plt.figure(figsize=(12, 4))
-plt.errorbar(
-    binned_time, binned_flux, yerr=binned_err,
-    fmt='.', color='blue', alpha=0.6)
-
-# Plot transit markers
-tolerance = 0.01  # ~14.4 minutes
-for tt in transit_times:
-    has_data = np.any(np.abs(binned_time - tt) < tolerance)
-    color = 'red' if has_data else 'black'
-    marker = 'v'
-    plt.plot(tt, 0.9825, marker=marker, color=color, markersize=8, alpha=0.8)
-
-
-plt.xlabel("Time (BJD - 2457000)")
-plt.ylabel("Relative Flux")
-plt.ylim(0.982, 1.019)
-plt.xlim(3190, 3350)
-plt.savefig(path + 'ngts_sectors.pdf', dpi=100, bbox_inches='tight')
-plt.show()
-
 
 t0 = 2459225.760694092 - 2457000  # reference transit
 period = 58.204721                  # days
@@ -186,32 +147,114 @@ for i, tt in enumerate(next_transits, 1):
     print(f"{i}: {tt:.5f}")
 
 
-# m = batman.TransitModel(params, binned_time)
-# model_flux = m.light_curve(params)
+# --- Create a fine time array spanning your whole dataset ---
+time_model = np.linspace(np.min(binned_time), np.max(binned_time), 50000)
 
-# plt.figure(figsize=(12, 4))
+# --- Initialize batman model for full time array ---
+m_full = batman.TransitModel(params, time_model)
+model_flux_full = m_full.light_curve(params)
 
-# plt.errorbar(
-#     binned_time,
-#     binned_flux,
-#     yerr=binned_err,
-#     fmt='.',
-#     color='blue',
-#     alpha=0.5,
-#     label='NGTS data'
-# )
+# --- Plot binned data ---
+plt.figure(figsize=(12, 4))
+plt.errorbar(
+    binned_time,
+    binned_flux,
+    yerr=binned_err,
+    fmt='.',
+    color='blue',
+    alpha=0.5,
+    label='NGTS binned data'
+)
 
-# plt.plot(
-#     binned_time,
-#     model_flux,
-#     color='red',
-#     lw=2,
-#     label='Transit model'
-# )
-#
-# plt.xlabel("Time (BJD - 2457000)")
-# plt.ylabel("Relative Flux")
-# plt.ylim(0.982, 1.019)
-# plt.xlim(3190, 3350)
+# --- Overplot full transit model ---
+plt.plot(
+    time_model,
+    model_flux_full,
+    color='red',
+    lw=2,
+    label='Transit model'
+)
+
+# Optional: mark predicted transit centers
+n_before = int(np.floor((np.min(binned_time) - params.t0) / params.per))
+n_after = int(np.ceil((np.max(binned_time) - params.t0) / params.per))
+transit_times = params.t0 + np.arange(n_before, n_after + 1) * params.per
+
+# Plot transit markers
+tolerance = 0.01  # ~14.4 minutes
+for tt in transit_times:
+    has_data = np.any(np.abs(binned_time - tt) < tolerance)
+    color = 'red' if has_data else 'black'
+    marker = 'v'
+    plt.plot(tt, 0.9825, marker=marker, color=color, markersize=8, alpha=0.8)
+
+
+plt.xlabel("Time (BJD - 2457000)")
+plt.ylabel("Relative Flux")
+plt.ylim(39300, 40500)
+plt.xlim(3190, 3350)
 # plt.legend()
-# plt.show()
+plt.show()
+
+# Compute predicted transit times
+n_before = int(np.floor((np.min(binned_time) - params.t0) / params.per))
+n_after  = int(np.ceil((np.max(binned_time) - params.t0) / params.per))
+transit_times = params.t0 + np.arange(n_before, n_after + 1) * params.per
+
+# Keep only transits that actually have data
+tolerance = 0.01
+transits_with_data = [tt for tt in transit_times if np.any(np.abs(binned_time - tt) < tolerance)]
+transits_to_plot = transits_with_data[:3]  # first three transits
+
+# --- Create figure with 2 rows, 3 columns ---
+fig = plt.figure(figsize=(12, 8))
+gs = gridspec.GridSpec(2, 3, height_ratios=[2.5, 1], hspace=0.2, wspace=0.3)
+
+# --- Top row: full lightcurve (span all 3 columns) ---
+ax0 = fig.add_subplot(gs[0, :])
+ax0.errorbar(binned_time, binned_flux, yerr=binned_err, fmt='.', color='blue', alpha=0.5, label='NGTS binned data')
+ax0.plot(time_model, model_flux_full, color='red', lw=2, label='Transit model')
+
+# Mark transit centers
+for tt in transit_times:
+    has_data = np.any(np.abs(binned_time - tt) < tolerance)
+    color = 'red' if has_data else 'black'
+    ax0.plot(tt, 0.9825, marker='v', color=color, markersize=8, alpha=0.8)
+
+ax0.set_xlabel("Time (BJD - 2457000)")
+ax0.set_ylabel("Relative Flux")
+ax0.set_xlim(3190, 3350)
+ax0.set_ylim(0.982, 1.019)
+# ax0.legend()
+
+# --- Bottom row: 3 columns for zoomed transits ---
+ax_bottom = [fig.add_subplot(gs[1, i]) for i in range(3)]  # bottom row, 3 columns
+
+# Manually specified x-limits for each subplot
+xlims = [(3213.24, 3217.24), (3271.45, 3275.45), (3329.65, 3333.65)]
+
+for i, ax in enumerate(ax_bottom):
+    # Plot full dataset and model
+    ax.errorbar(binned_time, binned_flux, yerr=binned_err, fmt='.', color='blue', alpha=0.5)
+    ax.plot(time_model, model_flux_full, color='red', lw=2)
+
+    # Mark transit centers
+    # Mark transit centers
+    for tt in transit_times:
+        if i < 2:   # first two subplots
+            marker_color = 'black'
+        else:       # third subplot
+            marker_color = 'red'
+        ax.plot(tt, 0.9835, marker='v', color=marker_color, markersize=8, alpha=0.8)
+
+    # Set y-axis limits
+    ax.set_ylim(0.982, 1.019)
+
+    # Set manual x-limits
+    ax.set_xlim(xlims[i])
+    ax.set_xlabel("Time (BJD - 2457000)")
+    ax.set_ylabel("Relative Flux")
+
+plt.show()
+
+
