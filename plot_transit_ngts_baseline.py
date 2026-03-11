@@ -5,6 +5,7 @@ import glob
 from plot_images import *
 import batman
 import matplotlib.gridspec as gridspec
+from astropy.time import Time
 
 
 plot_images()
@@ -29,38 +30,84 @@ print(filenames)
 all_time = []
 all_flux = []
 all_err = []
+all_bkg = []  # store background for filtering
+all_zp = []  # store ZERO_POINT for filtering
+
 
 # --- Load all FITS files ---
+updated_path = '/Users/u5500483/Downloads/TIC-453147896_NGTS/'
+
 for fname in filenames:
-    hdul = fits.open(fname)
-    data = hdul[4].data
-    # print the avaliable columns
-    print(f"Columns in {fname}: {data.columns.names}")
-    t = data['BJD'] - 2457000
-    f = data['FLUX_BSPROC']
-    e = data['FLUX_BSPROC_ERR']
-    hdul.close()
+
+    base_name = fname.split('/')[-1]
+    updated_file = updated_path + base_name
+
+    # Open OLD file (photometry)
+    hdul_old = fits.open(fname)
+    data_old = hdul_old[3].data
+
+    # Open UPDATED file (contains CLEAN column)
+    hdul_new = fits.open(updated_file)
+    data_new = hdul_new[4].data
+
+    # CLEAN mask
+    clean_mask = data_new['CLEAN'] == 1
+
+    # Extract data using CLEAN mask
+    t = data_old['BJD'][clean_mask] - 2457000
+    f = data_old['FLUX_BSPROC'][clean_mask]
+    e = data_old['FLUX_BSPROC_ERR'][clean_mask]
+    bkg = data_old['FLUX_BKG'][clean_mask]  # background
+    # Open OLD file (photometry)
+    hdul_zp = fits.open(fname)
+    hdul_zp = hdul_zp[2].data
+    zp = hdul_zp['ZERO_POINT'][clean_mask]  # zero point
+
+    hdul_old.close()
+    hdul_new.close()
 
     all_time.append(t)
     all_flux.append(f)
     all_err.append(e)
+    all_bkg.append(bkg)
+    all_zp.append(zp)
 
-# Concatenate
+# Concatenate all arrays
 time = np.concatenate(all_time)
 flux = np.concatenate(all_flux)
 flux_err = np.concatenate(all_err)
+bkg = np.concatenate(all_bkg)
+zp = np.concatenate(all_zp)
+
 
 # Remove NaNs
-good = np.isfinite(time) & np.isfinite(flux) & np.isfinite(flux_err)
+good = np.isfinite(time) & np.isfinite(flux) & np.isfinite(flux_err) & np.isfinite(bkg) & np.isfinite(zp)
 time = time[good]
 flux = flux[good]
 flux_err = flux_err[good]
+bkg = bkg[good]
+zp = zp[good]
 
-# --- Sort by time ---
-order = np.argsort(time)
-time = time[order]
-flux = flux[order]
-flux_err = flux_err[order]
+
+# --- Apply filters ---
+# mask_bkg = bkg <= 40000
+mask_bkg = bkg <= 40000
+mask_zp = (zp > -0.06) & (zp < 0.2)  # keep ZERO_POINT in (-0.06, 0.2)
+
+# Combine both masks
+final_mask = mask_bkg & mask_zp
+
+time = time[final_mask]
+flux = flux[final_mask]
+flux_err = flux_err[final_mask]
+bkg = bkg[final_mask]
+zp = zp[final_mask]
+# Then remove NaNs
+good = np.isfinite(time) & np.isfinite(flux) & np.isfinite(flux_err)
+
+time = time[good]
+flux = flux[good]
+flux_err = flux_err[good]
 
 # --- Identify observing segments ---
 time_diff = np.diff(time)
@@ -115,22 +162,6 @@ binned_time = np.concatenate(binned_time_all)
 binned_flux = np.concatenate(binned_flux_all)
 binned_err = np.concatenate(binned_err_all)
 
-# -------------------------------------------------
-# Transit ephemeris
-# -------------------------------------------------
-t0 = 2460098.8315131348 - 2457000
-t_min, t_max = np.nanmin(time), np.nanmax(time)
-n_before = int(np.floor((t_min - t0) / period))
-n_after = int(np.ceil((t_max - t0) / period))
-transit_times = t0 + np.arange(n_before, n_after + 1) * period
-
-# --- Plot binned light curve with error bars ---
-# --- Remove outliers from the binned light curve ---
-VALUE = 10  # threshold in MAD units, adjust if needed
-binned_time, binned_flux, binned_err, _, _ = remove_outliers(
-    binned_time, binned_flux, binned_err, VALUE
-)
-
 t0 = 2459225.760694092 - 2457000  # reference transit
 period = 58.204721                  # days
 # Find last observed time
@@ -154,47 +185,6 @@ time_model = np.linspace(np.min(binned_time), np.max(binned_time), 50000)
 m_full = batman.TransitModel(params, time_model)
 model_flux_full = m_full.light_curve(params)
 
-# --- Plot binned data ---
-plt.figure(figsize=(12, 4))
-plt.errorbar(
-    binned_time,
-    binned_flux,
-    yerr=binned_err,
-    fmt='.',
-    color='blue',
-    alpha=0.5,
-    label='NGTS binned data'
-)
-
-# --- Overplot full transit model ---
-plt.plot(
-    time_model,
-    model_flux_full,
-    color='red',
-    lw=2,
-    label='Transit model'
-)
-
-# Optional: mark predicted transit centers
-n_before = int(np.floor((np.min(binned_time) - params.t0) / params.per))
-n_after = int(np.ceil((np.max(binned_time) - params.t0) / params.per))
-transit_times = params.t0 + np.arange(n_before, n_after + 1) * params.per
-
-# Plot transit markers
-tolerance = 0.01  # ~14.4 minutes
-for tt in transit_times:
-    has_data = np.any(np.abs(binned_time - tt) < tolerance)
-    color = 'red' if has_data else 'black'
-    marker = 'v'
-    plt.plot(tt, 0.9825, marker=marker, color=color, markersize=8, alpha=0.8)
-
-
-plt.xlabel("Time (BJD - 2457000)")
-plt.ylabel("Relative Flux")
-plt.ylim(39300, 40500)
-plt.xlim(3190, 3350)
-# plt.legend()
-plt.show()
 
 # Compute predicted transit times
 n_before = int(np.floor((np.min(binned_time) - params.t0) / params.per))
@@ -224,7 +214,7 @@ for tt in transit_times:
 ax0.set_xlabel("Time (BJD - 2457000)")
 ax0.set_ylabel("Relative Flux")
 ax0.set_xlim(3190, 3350)
-ax0.set_ylim(0.982, 1.019)
+ax0.set_ylim(0.987, 1.008)
 # ax0.legend()
 
 # --- Bottom row: 3 columns for zoomed transits ---
@@ -248,13 +238,26 @@ for i, ax in enumerate(ax_bottom):
         ax.plot(tt, 0.9835, marker='v', color=marker_color, markersize=8, alpha=0.8)
 
     # Set y-axis limits
-    ax.set_ylim(0.982, 1.019)
+    ax.set_ylim(0.987, 1.008)
 
     # Set manual x-limits
     ax.set_xlim(xlims[i])
     ax.set_xlabel("Time (BJD - 2457000)")
     ax.set_ylabel("Relative Flux")
 
+plt.savefig("ngts_sectors.pdf", bbox_inches='tight')
 plt.show()
 
+# Convert to full BJD
+next_transits_full_bjd = next_transits + 2457000
 
+print("Next 10 transit times:")
+for i, tt in enumerate(next_transits_full_bjd, 1):
+
+    # Create astropy Time object (BJD is basically JD in TDB scale)
+    t_obj = Time(tt, format='jd', scale='tdb')
+
+    # Convert to UTC calendar date
+    utc_time = t_obj.utc
+
+    print(f"{i}: BJD = {tt:.5f}  |  UTC = {utc_time.iso}")
