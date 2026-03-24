@@ -88,10 +88,22 @@ flux_err = flux_err[good]
 bkg = bkg[good]
 zp = zp[good]
 
+# --- Linear detrending based on flux vs background ---
+slope = -8.081030e-08
+intercept = 1.001081
+
+# Compute the background trend
+flux_trend = slope * bkg + intercept
+
+# Detrend the flux
+flux = flux / flux_trend
+
+# Optionally, adjust flux_err too (divide by same trend)
+flux_err = flux_err / flux_trend
 
 # --- Apply filters ---
-# mask_bkg = bkg <= 40000
-mask_bkg = bkg <= 40000
+# supposed to filter bkg but will not do since slope fix this
+mask_bkg = bkg <= 400000
 mask_zp = (zp > -0.06) & (zp < 0.2)  # keep ZERO_POINT in (-0.06, 0.2)
 
 # Combine both masks
