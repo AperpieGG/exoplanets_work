@@ -168,14 +168,14 @@ period = 58.204721                  # days
 t_max = np.nanmax(time)  # assuming 'time' is your array of observations
 
 # Compute number of periods after t_max
-n_next = 10  # number of future transits to print
+n_next = 15  # number of future transits to print
 n_start = int(np.ceil((t_max - t0) / period))  # first transit after last observation
 
 # Next 10 transits
 next_transits = t0 + (n_start + np.arange(n_next)) * period
-print("Next 10 transit times (BJD - 2457000):")
-for i, tt in enumerate(next_transits, 1):
-    print(f"{i}: {tt:.5f}")
+# print("Next 10 transit times (BJD - 2457000):")
+# for i, tt in enumerate(next_transits, 1):
+#     print(f"{i}: {tt:.5f}")
 
 
 # --- Create a fine time array spanning your whole dataset ---
@@ -243,7 +243,9 @@ for i, ax in enumerate(ax_bottom):
     # Set manual x-limits
     ax.set_xlim(xlims[i])
     ax.set_xlabel("Time (BJD - 2457000)")
-    ax.set_ylabel("Relative Flux")
+    # only label y-label for the first plot
+    if i == 0:
+        ax.set_ylabel("Relative Flux")
 
 plt.savefig("ngts_sectors.pdf", bbox_inches='tight')
 plt.show()
@@ -252,7 +254,7 @@ plt.show()
 next_transits_full_bjd = next_transits + 2457000
 
 print("Next 10 transit times:")
-for i, tt in enumerate(next_transits_full_bjd, 1):
+for i, tt in enumerate(next_transits_full_bjd, 0):
 
     # Create astropy Time object (BJD is basically JD in TDB scale)
     t_obj = Time(tt, format='jd', scale='tdb')
@@ -261,3 +263,32 @@ for i, tt in enumerate(next_transits_full_bjd, 1):
     utc_time = t_obj.utc
 
     print(f"{i}: BJD = {tt:.5f}  |  UTC = {utc_time.iso}")
+
+print("Previous 10 transit times:")
+for i in range(0, 12):
+    prev_tt = t0 - i * period  # go backwards in time
+
+    # Convert to full BJD
+    prev_tt_full = prev_tt + 2457000
+
+    t_obj = Time(prev_tt_full, format='jd', scale='tdb')
+    utc_time = t_obj.utc
+
+    print(f"-{i}: BJD = {prev_tt_full:.5f}  |  UTC = {utc_time.iso}")
+
+
+print("\nTransits that are covered by the data:")
+
+tolerance = 0.02  # ~30 minutes (adjust if needed)
+
+for tt in transit_times:
+    # Check if this transit is within your data
+    has_data = np.any(np.abs(binned_time - tt) < tolerance)
+
+    if has_data:
+        tt_full = tt + 2457000  # convert to full BJD
+
+        t_obj = Time(tt_full, format='jd', scale='tdb')
+        utc_time = t_obj.utc
+
+        print(f"BJD = {tt_full:.10f}  |  UTC = {utc_time.iso}")
