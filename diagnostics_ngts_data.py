@@ -157,3 +157,27 @@ plt.xlabel("Sky Background (FLUX_BKG)")
 plt.ylabel("Flux")
 plt.title("Flux vs Sky Background (FLUX_BKG) (CLEAN = 1)")
 plt.show()
+
+
+# ===============================
+# 6️⃣ Flux vs Sky Background + Linear Fit
+# ===============================
+plt.figure()
+plt.scatter(bkg, flux, s=5, color='blue', label='Data')
+
+# --- Linear fit ---
+# y = m*x + c
+slope, intercept = np.polyfit(bkg, flux, 1)
+print(f"Slope of flux vs background: {slope:.6e}")
+print(f"Intercept of flux vs background: {intercept:.6e}")
+
+# --- Plot fitted line ---
+x_fit = np.linspace(np.min(bkg), np.max(bkg), 100)
+y_fit = slope * x_fit + intercept
+plt.plot(x_fit, y_fit, color='red', lw=2, label=f'Linear fit: slope={slope:.2e}')
+
+plt.xlabel("Sky Background (FLUX_BKG)")
+plt.ylabel("Flux")
+plt.title("Flux vs Sky Background (FLUX_BKG) (CLEAN = 1)")
+plt.legend()
+plt.show()
