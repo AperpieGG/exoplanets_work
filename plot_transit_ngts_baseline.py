@@ -129,6 +129,42 @@ n_segments = len(segment_breaks) + 1
 print(f"Number of observing segments (nights): {n_segments}")
 
 segment_edges = np.concatenate(([0], segment_breaks + 1, [len(time)]))
+# print the data points size (number) of each segment
+for i in range(n_segments):
+    start, end = segment_edges[i], segment_edges[i + 1]
+    print(f"Segment {i + 1}: {end - start} data points")
+
+# --- Identify observing segments ---
+time_diff = np.diff(time)
+gap_threshold = 2 / 24  # 2 hours in days
+segment_breaks = np.where(time_diff > gap_threshold)[0]
+n_segments = len(segment_breaks) + 1
+print(f"Number of observing segments (nights): {n_segments}")
+
+segment_edges = np.concatenate(([0], segment_breaks + 1, [len(time)]))
+# print the data points size (number) of each segment
+for i in range(n_segments):
+    start, end = segment_edges[i], segment_edges[i + 1]
+    print(f"Segment {i + 1}: {end - start} data points")
+
+# Filter segments with fewer than 200 points
+min_points = 200
+valid_segments = []
+for i in range(n_segments):
+    start, end = segment_edges[i], segment_edges[i + 1]
+    if (end - start) >= min_points:
+        valid_segments.append(i)
+
+# Rebuild segment_edges using only valid segments
+filtered_edges = [segment_edges[valid_segments[0]]]
+for i in valid_segments:
+    filtered_edges.append(segment_edges[i + 1])
+
+segment_edges = np.array(filtered_edges)
+n_segments = len(segment_edges) - 1
+
+print(f"Number of observing segments (nights) with >= {min_points} points: {n_segments}")
+print("Filtered segment lengths:", [segment_edges[i+1]-segment_edges[i] for i in range(n_segments)])
 
 
 # --- Bin function with errors ---
@@ -225,7 +261,7 @@ for tt in transit_times:
 
 ax0.set_xlabel("Time (BJD - 2457000)")
 ax0.set_ylabel("Relative Flux")
-ax0.set_xlim(3190, 3350)
+ax0.set_xlim(3205, 3350)
 ax0.set_ylim(0.987, 1.008)
 # ax0.legend()
 
