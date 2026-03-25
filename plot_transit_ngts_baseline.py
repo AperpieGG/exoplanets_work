@@ -6,7 +6,7 @@ from plot_images import *
 import batman
 import matplotlib.gridspec as gridspec
 from astropy.time import Time
-
+from astropy.stats import sigma_clip
 
 plot_images()
 
@@ -121,6 +121,8 @@ time = time[good]
 flux = flux[good]
 flux_err = flux_err[good]
 
+flux = sigma_clip(flux, sigma=4, maxiters=3)
+
 # --- Identify observing segments ---
 time_diff = np.diff(time)
 gap_threshold = 2 / 24  # 2 hours in days
@@ -168,7 +170,7 @@ print("Filtered segment lengths:", [segment_edges[i+1]-segment_edges[i] for i in
 
 
 # --- Bin function with errors ---
-def bin_segment(t, f, e, bin_minutes=5):
+def bin_segment(t, f, e, bin_minutes=5, min_points=20):
     bin_days = bin_minutes / 1440  # convert minutes to days
     bins = np.arange(t[0], t[-1] + bin_days, bin_days)
     digitized = np.digitize(t, bins)
@@ -179,11 +181,14 @@ def bin_segment(t, f, e, bin_minutes=5):
 
     for i in range(1, len(bins)):
         mask = digitized == i
-        if np.any(mask):
+        n_points = np.sum(mask)
+
+        # --- Keep only bins with enough data points ---
+        if n_points >= min_points:
             binned_time.append(np.mean(t[mask]))
             binned_flux.append(np.mean(f[mask]))
             # Combine errors in quadrature
-            binned_err.append(np.sqrt(np.sum(e[mask]**2)) / np.sum(mask))
+            binned_err.append(np.sqrt(np.sum(e[mask]**2)) / n_points)
 
     return np.array(binned_time), np.array(binned_flux), np.array(binned_err)
 
@@ -199,7 +204,7 @@ for i in range(n_segments):
     f_seg = flux[start:end]
     e_seg = flux_err[start:end]
 
-    t_b, f_b, e_b = bin_segment(t_seg, f_seg, e_seg, bin_minutes=5)
+    t_b, f_b, e_b = bin_segment(t_seg, f_seg, e_seg, bin_minutes=5, min_points=20)
 
     binned_time_all.append(t_b)
     binned_flux_all.append(f_b)
