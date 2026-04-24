@@ -262,7 +262,7 @@ ax0.plot(time_model, model_flux_full, color='red', lw=2, label='Transit model')
 for tt in transit_times:
     has_data = np.any(np.abs(binned_time - tt) < tolerance)
     color = 'red' if has_data else 'black'
-    ax0.plot(tt, 0.9825, marker='v', color=color, markersize=8, alpha=0.8)
+    ax0.plot(tt, 0.9875, marker='v', color=color, markersize=8, alpha=0.8)
 
 ax0.set_xlabel("Time (BJD - 2457000)")
 ax0.set_ylabel("Relative Flux")
