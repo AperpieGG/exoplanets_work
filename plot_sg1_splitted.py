@@ -31,7 +31,7 @@ datasets = [
 colors = ["black", "orange", "green", "purple", "brown", "teal"]
 
 # Vertical offsets for stacking the fluxes
-offsets = [0, 0.02, 0.04, 0.06, 0.08, 0.1]
+offsets = [0, 0.01, 0.02, 0.03, 0.04, 0.05]
 markers = ['o', 's', '^', 'D', 'v', 'P']  # circle, square, triangle_up, diamond, triangle_down, plus
 
 
@@ -86,9 +86,9 @@ ax[1].axhline(0, color='red', lw=1)
 # Axes formatting
 ax[0].set(ylabel='Normalized flux + offset')
 ax[1].set(ylabel='Residuals', ylim=transit_res_ylim)
-ax[0].set(xlim=(-4, 4))
+ax[0].set(xlim=(-5, 5))
 ax[1].set(ylim=(-0.005, 0.005))
-ax[0].set(ylim=(0.984, 1.12))
+ax[0].set(ylim=(0.984, 1.055))
 ax[0].legend(
     loc='lower center',
     bbox_to_anchor=(0.5, 0.98),
